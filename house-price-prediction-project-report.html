@@ -1,0 +1,435 @@
+
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>House Price Prediction — Project Report</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, "Segoe UI", system-ui, sans-serif;
+    font-size: 14px;
+    line-height: 1.65;
+    color: #1f2328;
+    background: #ffffff;
+  }
+  .page { max-width: 760px; margin: 0 auto; padding: 48px 32px 64px; }
+
+  /* ── header ── */
+  .header { border-bottom: 2px solid #e5e7eb; padding-bottom: 24px; margin-bottom: 36px; }
+  .header h1 { font-size: 26px; font-weight: 700; color: #1f2328; }
+  .header .sub { font-size: 13px; color: #57606a; margin-top: 6px; }
+  .badge {
+    display: inline-block; font-size: 11px; font-weight: 600;
+    background: #f0f6ff; color: #3b82d4; border: 1px solid #bfdbfe;
+    border-radius: 4px; padding: 2px 8px; margin-right: 6px; margin-top: 8px;
+  }
+
+  /* ── sections ── */
+  h2 {
+    font-size: 17px; font-weight: 700; color: #1f2328;
+    margin: 36px 0 12px;
+    padding-bottom: 6px;
+    border-bottom: 1px solid #e5e7eb;
+  }
+  h3 { font-size: 14px; font-weight: 600; color: #1f2328; margin: 20px 0 8px; }
+  p  { margin-bottom: 10px; color: #1f2328; }
+
+  /* ── metric cards ── */
+  .metrics-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin: 16px 0; }
+  .metric-card {
+    background: #f7f8fa; border: 1px solid #e5e7eb;
+    border-radius: 8px; padding: 14px 16px; text-align: center;
+  }
+  .metric-card .label { font-size: 11px; color: #57606a; text-transform: uppercase; letter-spacing: 0.5px; }
+  .metric-card .value { font-size: 22px; font-weight: 700; color: #1f2328; margin-top: 4px; }
+  .metric-card .unit  { font-size: 11px; color: #57606a; }
+
+  /* ── file tree ── */
+  .tree {
+    background: #f7f8fa; border: 1px solid #e5e7eb;
+    border-radius: 8px; padding: 16px 20px;
+    font-family: "Cascadia Code", "Consolas", monospace; font-size: 12.5px;
+    line-height: 1.8; color: #1f2328;
+  }
+  .tree .dir  { color: #3b82d4; font-weight: 600; }
+  .tree .file { color: #1f2328; }
+  .tree .note { color: #57606a; }
+
+  /* ── table ── */
+  table { width: 100%; border-collapse: collapse; margin: 12px 0; font-size: 13px; }
+  th {
+    background: #f7f8fa; text-align: left;
+    padding: 8px 12px; border-bottom: 2px solid #e5e7eb;
+    font-weight: 600; color: #57606a; font-size: 11px; text-transform: uppercase;
+  }
+  td { padding: 8px 12px; border-bottom: 1px solid #e5e7eb; }
+  tr:last-child td { border-bottom: none; }
+  .best { background: #f0fdf4; }
+  .tag-green  { background: #d1fae5; color: #065f46; font-size: 11px; font-weight: 600; border-radius: 4px; padding: 1px 6px; }
+  .tag-blue   { background: #dbeafe; color: #1e40af; font-size: 11px; font-weight: 600; border-radius: 4px; padding: 1px 6px; }
+  .tag-purple { background: #ede9fe; color: #5b21b6; font-size: 11px; font-weight: 600; border-radius: 4px; padding: 1px 6px; }
+
+  /* ── code blocks ── */
+  .code {
+    background: #f7f8fa; border: 1px solid #e5e7eb; border-radius: 6px;
+    padding: 12px 16px; font-family: "Cascadia Code", "Consolas", monospace;
+    font-size: 12.5px; color: #1f2328; margin: 10px 0;
+  }
+
+  /* ── callout ── */
+  .callout {
+    border-left: 3px solid #3b82d4; background: #f0f6ff;
+    border-radius: 0 6px 6px 0; padding: 12px 16px; margin: 14px 0;
+    font-size: 13px; color: #1e40af;
+  }
+  .callout.warn { border-color: #f59e0b; background: #fffbeb; color: #92400e; }
+
+  /* ── step list ── */
+  ol.steps { padding-left: 0; list-style: none; counter-reset: step; }
+  ol.steps li {
+    counter-increment: step;
+    display: flex; align-items: flex-start; gap: 12px;
+    margin-bottom: 12px;
+  }
+  ol.steps li::before {
+    content: counter(step);
+    flex-shrink: 0;
+    width: 24px; height: 24px; border-radius: 50%;
+    background: #3b82d4; color: white;
+    font-size: 12px; font-weight: 700;
+    display: flex; align-items: center; justify-content: center;
+  }
+
+  /* ── architecture diagram (SVG) ── */
+  .arch-wrap { margin: 16px 0; }
+
+  /* ── two col ── */
+  .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin: 12px 0; }
+  .card {
+    background: #f7f8fa; border: 1px solid #e5e7eb;
+    border-radius: 8px; padding: 16px;
+  }
+  .card h4 { font-size: 13px; font-weight: 600; margin-bottom: 8px; }
+  .card ul { padding-left: 18px; }
+  .card ul li { margin-bottom: 4px; font-size: 13px; color: #57606a; }
+
+  /* ── footer ── */
+  .footer {
+    margin-top: 56px; padding-top: 16px;
+    border-top: 1px solid #e5e7eb;
+    text-align: center; font-size: 12px; color: #57606a;
+  }
+</style>
+</head>
+<body>
+<div class="page">
+
+  
+  <div class="header">
+    <h1>🏠 House Price Prediction</h1>
+    <div class="sub">Technical Project Report · Machine Learning + Streamlit Web Application</div>
+    <div style="margin-top:10px">
+      <span class="badge">Python 3.14</span>
+      <span class="badge">NumPy</span>
+      <span class="badge">Pandas</span>
+      <span class="badge">Matplotlib</span>
+      <span class="badge">Seaborn</span>
+      <span class="badge">Streamlit</span>
+      <span class="badge">Joblib</span>
+    </div>
+  </div>
+
+  
+  <h2>1. Project Objective</h2>
+  <p>
+    Build an end-to-end machine learning application that predicts residential house prices
+    based on area (sq ft) and number of bedrooms. The project delivers both a
+    <strong>pure-NumPy ML backend</strong> (zero sklearn/scipy dependency) and an
+    <strong>interactive Streamlit web frontend</strong> with data exploration, live predictions,
+    and model evaluation dashboards.
+  </p>
+
+  
+  <h2>2. Dataset</h2>
+  <table>
+    <tr><th>Attribute</th><th>Detail</th></tr>
+    <tr><td>File</td><td><code>Housing.csv</code></td></tr>
+    <tr><td>Rows</td><td>34 records</td></tr>
+    <tr><td>Features</td><td><code>area</code> (sq ft), <code>bedrooms</code> (count)</td></tr>
+    <tr><td>Target</td><td><code>price</code> (Indian Rupees)</td></tr>
+    <tr><td>Price range</td><td>Rs 8,190,000 – Rs 13,300,000</td></tr>
+    <tr><td>Area range</td><td>3,500 – 16,200 sq ft</td></tr>
+    <tr><td>Bedroom values</td><td>3, 4, 5</td></tr>
+  </table>
+
+  <div class="callout">
+    The dataset is small (34 rows). Models are evaluated on an 80/20 train/test split
+    (deterministic seed = 42), yielding 27 training and 7 test samples.
+  </div>
+
+  
+  <h2>3. System Architecture</h2>
+  <div class="arch-wrap">
+    <svg width="100%" xmlns="http://www.w3.org/2000/svg" font-family="-apple-system,Segoe UI,sans-serif" font-size="12">
+      
+      <rect x="10" y="55" width="110" height="50" rx="6" fill="#f0f6ff" stroke="#bfdbfe" stroke-width="1.5"></rect>
+      <text x="65" y="77" text-anchor="middle" font-weight="600" fill="#1e40af">Housing.csv</text>
+      <text x="65" y="93" text-anchor="middle" fill="#57606a">34 rows</text>
+
+      
+      <line x1="122" y1="80" x2="158" y2="80" stroke="#e5e7eb" stroke-width="1.5" marker-end="url(#arr)"></line>
+
+      
+      <rect x="160" y="40" width="130" height="80" rx="6" fill="#f7f8fa" stroke="#e5e7eb" stroke-width="1.5"></rect>
+      <text x="225" y="65" text-anchor="middle" font-weight="600" fill="#1f2328">train_model.py</text>
+      <text x="225" y="82" text-anchor="middle" fill="#57606a">Scale · Train · Compare</text>
+      <text x="225" y="98" text-anchor="middle" fill="#57606a">Save .pkl + .json</text>
+
+      
+      <line x1="225" y1="40" x2="225" y2="20" stroke="#e5e7eb" stroke-width="1.5"></line>
+      <line x1="225" y1="20" x2="415" y2="20" stroke="#e5e7eb" stroke-width="1.5"></line>
+      <line x1="415" y1="20" x2="415" y2="40" stroke="#e5e7eb" stroke-width="1.5" marker-end="url(#arr)"></line>
+
+      
+      <rect x="355" y="40" width="130" height="80" rx="6" fill="#ede9fe" stroke="#c4b5fd" stroke-width="1.5"></rect>
+      <text x="420" y="65" text-anchor="middle" font-weight="600" fill="#5b21b6">models_numpy.py</text>
+      <text x="420" y="82" text-anchor="middle" fill="#57606a">LinearRegression</text>
+      <text x="420" y="98" text-anchor="middle" fill="#57606a">RandomForest (CART)</text>
+
+      
+      <line x1="292" y1="80" x2="328" y2="80" stroke="#e5e7eb" stroke-width="1.5" marker-end="url(#arr)"></line>
+      
+      <rect x="330" y="65" width="22" height="30" rx="3" fill="#f7f8fa" stroke="#e5e7eb" stroke-width="1"></rect>
+      <text x="341" y="84" text-anchor="middle" fill="#57606a" font-size="10">.pkl</text>
+      <line x1="352" y1="80" x2="386" y2="80" stroke="#e5e7eb" stroke-width="1.5" marker-end="url(#arr)"></line>
+
+      
+      <line x1="487" y1="80" x2="523" y2="80" stroke="#e5e7eb" stroke-width="1.5" marker-end="url(#arr)"></line>
+
+      
+      <rect x="525" y="40" width="130" height="80" rx="6" fill="#f0fdf4" stroke="#86efac" stroke-width="1.5"></rect>
+      <text x="590" y="65" text-anchor="middle" font-weight="600" fill="#065f46">app.py</text>
+      <text x="590" y="82" text-anchor="middle" fill="#57606a">Streamlit Frontend</text>
+      <text x="590" y="98" text-anchor="middle" fill="#57606a">3-tab UI</text>
+
+      
+      <defs>
+        <marker id="arr">
+          <path d="M0,0 L0,6 L8,3 z" fill="#9ca3af"></path>
+        </marker>
+      </defs>
+    </svg>
+  </div>
+
+  
+  <h2>4. Project Structure</h2>
+  <div class="tree">
+    <span class="dir">house_price_app/</span><br />
+      ├── <span class="dir">data/</span><br />
+      │   └── <span class="file">Housing.csv</span>  <span class="note">← source dataset</span><br />
+      ├── <span class="dir">models/</span>  <span class="note">← auto-generated by train_model.py</span><br />
+      │   ├── <span class="file">house_price_model.pkl</span>  <span class="note">trained model + scaler dict</span><br />
+      │   ├── <span class="file">model_metrics.json</span>  <span class="note">R2, MAE, RMSE per model</span><br />
+      │   └── <span class="file">eval_plot.png</span>  <span class="note">actual vs predicted + residuals</span><br />
+      ├── <span class="file">models_numpy.py</span>  <span class="note">← pure-NumPy ML classes</span><br />
+      ├── <span class="file">train_model.py</span>  <span class="note">← backend: train &amp; save</span><br />
+      ├── <span class="file">app.py</span>  <span class="note">← Streamlit frontend</span><br />
+      ├── <span class="file">requirements.txt</span><br />
+      └── <span class="file">README.md</span>
+  </div>
+
+  
+  <h2>5. Machine Learning Pipeline</h2>
+
+  <h3>5.1 Preprocessing</h3>
+  <p>
+    Features are standardised (Z-score normalisation) using the training-set mean and standard
+    deviation, computed with NumPy. The scaler parameters (<code>mu</code>, <code>std</code>) are
+    persisted inside the <code>.pkl</code> file alongside the model so inference is identical
+    at prediction time.
+  </p>
+
+  <h3>5.2 Models Implemented (pure NumPy)</h3>
+  <div class="two-col">
+    <div class="card">
+      <h4>Linear Regression</h4>
+      <ul>
+        <li>Ordinary Least Squares</li>
+        <li>Normal equation: <em>w = (XᵀX)⁻¹ Xᵀy</em></li>
+        <li>Solved via <code>np.linalg.lstsq</code></li>
+        <li>Bias column prepended automatically</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h4>Random Forest Regressor</h4>
+      <ul>
+        <li>Bootstrap-aggregating ensemble</li>
+        <li>80 CART trees, max depth 4</li>
+        <li>Splits by variance reduction</li>
+        <li>Final prediction = mean of trees</li>
+      </ul>
+    </div>
+  </div>
+
+  <h3>5.3 Model Selection</h3>
+  <p>
+    Both models are trained on the same 80 % split and compared by R² on the held-out
+    20 % test set. The best model is serialised with <strong>Joblib</strong>.
+  </p>
+
+  
+  <h2>6. Model Evaluation Results</h2>
+
+  <div class="metrics-grid">
+    <div class="metric-card">
+      <div class="label">Best Model</div>
+      <div class="value" style="font-size:16px;padding-top:4px">Random Forest</div>
+    </div>
+    <div class="metric-card">
+      <div class="label">R² Score</div>
+      <div class="value">0.2044</div>
+      <div class="unit">test set</div>
+    </div>
+    <div class="metric-card">
+      <div class="label">MAE</div>
+      <div class="value" style="font-size:18px">1.06M</div>
+      <div class="unit">Rs</div>
+    </div>
+    <div class="metric-card">
+      <div class="label">RMSE</div>
+      <div class="value" style="font-size:18px">1.42M</div>
+      <div class="unit">Rs</div>
+    </div>
+  </div>
+
+  <table>
+    <tr>
+      <th>Model</th><th>R² (test)</th><th>MAE (Rs)</th><th>RMSE (Rs)</th><th>Status</th>
+    </tr>
+    <tr class="best">
+      <td><strong>Random Forest</strong></td>
+      <td><strong>0.2044</strong></td>
+      <td>1,062,995</td>
+      <td>1,420,519</td>
+      <td><span class="tag-green">Best</span></td>
+    </tr>
+    <tr>
+      <td>Linear Regression</td>
+      <td>−0.1601</td>
+      <td>1,348,271</td>
+      <td>1,715,373</td>
+      <td><span class="tag-blue">Baseline</span></td>
+    </tr>
+  </table>
+
+  <div class="callout warn">
+    R² scores are modest because the dataset contains only 34 rows and 2 features.
+    Random Forest still outperforms Linear Regression on both MAE and RMSE, demonstrating
+    its ability to capture non-linear interactions between area and price.
+  </div>
+
+  
+  <h2>7. Streamlit Frontend</h2>
+  <table>
+    <tr><th>Tab</th><th>Contents</th></tr>
+    <tr>
+      <td><strong>🔮 Prediction</strong></td>
+      <td>
+        Area slider + bedroom dropdown → live price estimate with ±10 % confidence range.
+        Scatter plot of dataset with crosshairs on user input.
+      </td>
+    </tr>
+    <tr>
+      <td><strong>📊 Data Insights</strong></td>
+      <td>
+        Summary statistics, full data table, price distribution histogram,
+        avg price by bedroom bar chart, area–price scatter with trend line,
+        feature correlation heatmap.
+      </td>
+    </tr>
+    <tr>
+      <td><strong>📈 Model Performance</strong></td>
+      <td>
+        R²/MAE/RMSE metric cards, green-highlighted model comparison table,
+        actual-vs-predicted scatter + residual histogram from saved eval plot.
+      </td>
+    </tr>
+  </table>
+
+  
+  <h2>8. Bugs Fixed</h2>
+  <table>
+    <tr><th>#</th><th>File</th><th>Bug</th><th>Fix</th></tr>
+    <tr>
+      <td>1</td>
+      <td><code>train_model.py</code></td>
+      <td><code>matplotlib.use("Agg")</code> called after <code>from matplotlib.ticker import FuncFormatter</code> — backend must be set before pyplot is imported</td>
+      <td>Moved <code>matplotlib.use("Agg")</code> before all pyplot/ticker imports</td>
+    </tr>
+    <tr>
+      <td>2</td>
+      <td><code>app.py</code></td>
+      <td><code>plt.FuncFormatter</code> used instead of <code>mticker.FuncFormatter</code>; <code>FuncFormatter</code> is not an attribute of the pyplot module</td>
+      <td>Added <code>import matplotlib.ticker as mticker</code> and replaced all formatter calls</td>
+    </tr>
+    <tr>
+      <td>3</td>
+      <td><code>app.py</code></td>
+      <td>DataFrame column names (<code>"R²"</code>, <code>"MAE (₹)"</code>, <code>"RMSE (₹)"</code>) contained special Unicode characters that caused encoding issues on Windows cp1252 consoles and mismatched pandas <code>highlight_max/min</code> subset names</td>
+      <td>Renamed to plain ASCII: <code>"R2"</code>, <code>"MAE"</code>, <code>"RMSE"</code></td>
+    </tr>
+    <tr>
+      <td>4</td>
+      <td><code>app.py</code></td>
+      <td><code>int(df["area"].min())</code> etc. passed a full pandas <code>Series</code> to <code>int()</code>, raising a type error in strict pyright checking and potentially at runtime on newer pandas</td>
+      <td>Changed to <code>df["area"].min().item()</code> to extract a plain Python scalar first</td>
+    </tr>
+    <tr>
+      <td>5</td>
+      <td><code>app.py</code></td>
+      <td>Variable name <code>std</code> shadowed the local scaler array loaded from the model dict, risking silent incorrect scaling if import order changed</td>
+      <td>Renamed to <code>std_vals</code> throughout</td>
+    </tr>
+  </table>
+
+  
+  <h2>9. How to Run</h2>
+  <ol class="steps">
+    <li>
+      <div>
+        <strong>Install dependencies</strong>
+        <div class="code">pip install -r requirements.txt</div>
+      </div>
+    </li>
+    <li>
+      <div>
+        <strong>Train the model</strong> (one-time step — generates <code>.pkl</code>, <code>.json</code>, and <code>.png</code>)
+        <div class="code">cd house_price_app<br />python train_model.py</div>
+      </div>
+    </li>
+    <li>
+      <div>
+        <strong>Launch the Streamlit app</strong>
+        <div class="code">streamlit run app.py</div>
+        Open <strong>http://localhost:8501</strong> in your browser.
+      </div>
+    </li>
+  </ol>
+
+  
+  <h2>10. Technology Stack</h2>
+  <table>
+    <tr><th>Layer</th><th>Technology</th><th>Purpose</th></tr>
+    <tr><td>Frontend</td><td>Streamlit 1.32+</td><td>Web UI, tabs, sidebar, metrics</td></tr>
+    <tr><td>Visualisation</td><td>Matplotlib, Seaborn</td><td>All charts rendered server-side</td></tr>
+    <tr><td>ML Backend</td><td>Pure NumPy (custom classes)</td><td>Linear Regression, CART tree, Random Forest</td></tr>
+    <tr><td>Data</td><td>Pandas, NumPy</td><td>Loading, preprocessing, EDA stats</td></tr>
+    <tr><td>Serialisation</td><td>Joblib</td><td>Persist model + scaler as a single dict</td></tr>
+    <tr><td>Runtime</td><td>Python 3.14</td><td>No sklearn/scipy (blocked by App Control)</td></tr>
+  </table>
+
+  <div class="footer">Made with IBM Bob</div>
+</div>
+</body>
+</html>
