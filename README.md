@@ -1,12 +1,12 @@
-# CSRBOX IBM AI — ML Projects
+# CSRBOX IBM AI â€” ML Projects
 
 Two machine learning projects built with Python and IBM Watson/Scikit-learn.
 
 ---
 
-## ?? Projects
+## Projects
 
-### ?? House Price Prediction App
+###  House Price Prediction App
 Located in house_price_app/
 
 A Flask web application that predicts house prices based on features like area, bedrooms, bathrooms, and location.
@@ -14,7 +14,7 @@ A Flask web application that predicts house prices based on features like area, 
 - **Backend:** Python / Flask (pp.py)
 - **Model:** Trained linear regression model (models/house_price_model.pkl)
 - **Frontend:** HTML form (house_price_frontend.html)
-- **Training:** 	rain_model.py — retrain the model from data/Housing.csv
+- **Training:** 	rain_model.py â€” retrain the model from data/Housing.csv
 
 **Run locally:**
 ```bash
@@ -25,14 +25,14 @@ python app.py
 
 ---
 
-### ?? Salary Predictor
+###  Salary Predictor
 Located at root level (salary_predictor.py, Salary.csv)
 
 A simple linear regression model that predicts salary based on years of experience.
 
 - **Script:** salary_predictor.py
 - **Data:** Salary.csv
-- **Report:** salary_predictor.html — visual report of the model
+- **Report:** salary_predictor.html â€” visual report of the model
 
 **Run locally:**
 ```bash
@@ -41,6 +41,6 @@ python salary_predictor.py
 
 ---
 
-## ?? Requirements
+##  Requirements
 - Python 3.8+
 - See house_price_app/requirements.txt for the Flask app dependencies
