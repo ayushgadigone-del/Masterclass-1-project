@@ -261,10 +261,18 @@ with tab3:
         comp_df.columns = ["Model", "R2", "MAE", "RMSE"]
         comp_df["MAE"]  = comp_df["MAE"].astype(float)
         comp_df["RMSE"] = comp_df["RMSE"].astype(float)
+
+        def highlight_best_model(row):
+            """Amber highlight for the best model row, neutral for others."""
+            is_best = metrics.get("best_model", "").lower() in row["Model"].lower()
+            bg = "background-color: #f59e0b; color: #1a1a1a; font-weight: 700" if is_best else ""
+            return [bg] * len(row)
+
         st.dataframe(
             comp_df.style
-                .highlight_max(subset=["R2"], color="#d1fae5")
-                .highlight_min(subset=["MAE", "RMSE"], color="#d1fae5")
+                .apply(highlight_best_model, axis=1)
+                .highlight_max(subset=["R2"], color="#bbf7d0")
+                .highlight_min(subset=["MAE", "RMSE"], color="#bbf7d0")
                 .format({"MAE": "Rs {:,.0f}", "RMSE": "Rs {:,.0f}"}),
             use_container_width=True,
         )
