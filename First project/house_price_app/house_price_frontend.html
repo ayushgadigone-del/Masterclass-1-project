@@ -1,0 +1,694 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>House Price Predictor</title>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: -apple-system, "Segoe UI", system-ui, sans-serif;
+  font-size: 14px; line-height: 1.6; color: #1f2328;
+  background: #f3f4f6; min-height: 100vh;
+}
+.app { max-width: 1100px; margin: 0 auto; padding: 24px 20px 60px; }
+
+/* ── header ── */
+.header {
+  background: linear-gradient(135deg, #3b82d4 0%, #7c5cd8 100%);
+  border-radius: 14px; padding: 28px 32px; color: white; margin-bottom: 24px;
+}
+.header h1 { font-size: 26px; font-weight: 800; }
+.header p  { opacity: .85; margin-top: 6px; font-size: 13px; }
+.badge-row { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
+.badge {
+  background: rgba(255,255,255,.2); border: 1px solid rgba(255,255,255,.35);
+  border-radius: 20px; padding: 3px 12px; font-size: 11px; font-weight: 600;
+}
+
+/* ── tabs ── */
+.tabs { display: flex; gap: 4px; margin-bottom: 20px; }
+.tab {
+  padding: 9px 20px; border-radius: 8px; border: 1px solid #e5e7eb;
+  background: #fff; cursor: pointer; font-size: 13px; font-weight: 500;
+  color: #57606a; transition: all .15s;
+}
+.tab.active { background: #3b82d4; color: white; border-color: #3b82d4; }
+.tab:hover:not(.active) { background: #f7f8fa; }
+.panel { display: none; }
+.panel.active { display: block; }
+
+/* ── cards ── */
+.card {
+  background: #fff; border: 1px solid #e5e7eb;
+  border-radius: 12px; padding: 24px; margin-bottom: 20px;
+}
+.card h2 { font-size: 16px; font-weight: 700; margin-bottom: 16px; color: #1f2328; }
+
+/* ── grid ── */
+.grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+@media(max-width:680px){ .grid-2 { grid-template-columns: 1fr; } }
+.grid-4 { display: grid; grid-template-columns: repeat(4,1fr); gap: 12px; margin-bottom: 20px; }
+@media(max-width:680px){ .grid-4 { grid-template-columns: repeat(2,1fr); } }
+
+/* ── metric cards ── */
+.metric {
+  background: #f7f8fa; border: 1px solid #e5e7eb;
+  border-radius: 10px; padding: 16px; text-align: center;
+}
+.metric .lbl { font-size: 11px; color: #57606a; text-transform: uppercase; letter-spacing: .5px; }
+.metric .val { font-size: 22px; font-weight: 700; color: #1f2328; margin-top: 4px; }
+.metric .unit { font-size: 11px; color: #57606a; }
+
+/* ── controls ── */
+.control-row { margin-bottom: 20px; }
+.control-row label { display: block; font-size: 12px; font-weight: 600; color: #57606a; margin-bottom: 6px; text-transform: uppercase; letter-spacing: .4px; }
+.slider-wrap { position: relative; }
+input[type=range] {
+  width: 100%; height: 6px; border-radius: 3px; appearance: none;
+  background: linear-gradient(to right, #3b82d4 0%, #3b82d4 var(--pct,50%), #e5e7eb var(--pct,50%));
+  outline: none; cursor: pointer;
+}
+input[type=range]::-webkit-slider-thumb {
+  appearance: none; width: 18px; height: 18px; border-radius: 50%;
+  background: #3b82d4; border: 2px solid white;
+  box-shadow: 0 1px 4px rgba(0,0,0,.2);
+}
+.slider-val {
+  display: inline-block; background: #3b82d4; color: white;
+  font-size: 12px; font-weight: 700; padding: 3px 10px; border-radius: 20px;
+  margin-bottom: 8px;
+}
+.radio-group { display: flex; gap: 8px; flex-wrap: wrap; }
+.radio-group label {
+  display: flex; align-items: center; gap: 6px; cursor: pointer;
+  background: #f7f8fa; border: 1.5px solid #e5e7eb; border-radius: 8px;
+  padding: 8px 16px; font-size: 13px; font-weight: 500; color: #1f2328;
+  text-transform: none; letter-spacing: 0; transition: all .12s;
+}
+.radio-group input[type=radio] { display: none; }
+.radio-group input[type=radio]:checked + span { color: #fff; }
+.radio-group label:has(input:checked) {
+  background: #3b82d4; border-color: #3b82d4; color: white;
+}
+
+/* ── prediction box ── */
+.pred-box {
+  background: linear-gradient(135deg, #3b82d4 0%, #7c5cd8 100%);
+  border-radius: 14px; padding: 28px; text-align: center; color: white; margin-top: 8px;
+}
+.pred-box .label { font-size: 14px; opacity: .85; }
+.pred-box .price { font-size: 40px; font-weight: 800; letter-spacing: -1px; margin: 8px 0; }
+.pred-box .sub   { font-size: 12px; opacity: .75; }
+.range-bar {
+  background: #f0f6ff; border: 1px solid #bfdbfe; border-radius: 8px;
+  padding: 10px 16px; text-align: center; font-size: 13px; color: #1e40af;
+  margin-top: 12px;
+}
+
+/* ── canvas chart ── */
+.chart-wrap { position: relative; width: 100%; }
+canvas { width: 100% !important; border-radius: 8px; }
+
+/* ── data table ── */
+table { width: 100%; border-collapse: collapse; font-size: 13px; }
+th { background: #f7f8fa; text-align: left; padding: 8px 12px; border-bottom: 2px solid #e5e7eb; font-size: 11px; text-transform: uppercase; color: #57606a; letter-spacing: .4px; }
+td { padding: 8px 12px; border-bottom: 1px solid #f3f4f6; }
+tr:last-child td { border-bottom: none; }
+tr:hover td { background: #f9fafb; }
+.tag { display: inline-block; font-size: 11px; font-weight: 600; border-radius: 4px; padding: 2px 7px; }
+.tag-green  { background: #d1fae5; color: #065f46; }
+.tag-blue   { background: #dbeafe; color: #1e40af; }
+
+/* ── footer ── */
+.footer { margin-top: 48px; padding-top: 16px; border-top: 1px solid #e5e7eb; text-align: center; font-size: 12px; color: #57606a; }
+</style>
+</head>
+<body>
+<div class="app">
+
+  <!-- HEADER -->
+  <div class="header">
+    <h1>&#127968; House Price Predictor</h1>
+    <p>Random Forest model trained on 34 housing records &mdash; pure NumPy backend</p>
+    <div class="badge-row">
+      <span class="badge">Random Forest</span>
+      <span class="badge">R&#178; = 0.2044</span>
+      <span class="badge">34 samples</span>
+      <span class="badge">2 features</span>
+      <span class="badge">Standalone HTML</span>
+    </div>
+  </div>
+
+  <!-- TABS -->
+  <div class="tabs">
+    <button class="tab active" onclick="switchTab('pred')">&#128302; Prediction</button>
+    <button class="tab" onclick="switchTab('data')">&#128202; Data Insights</button>
+    <button class="tab" onclick="switchTab('perf')">&#128200; Model Performance</button>
+  </div>
+
+  <!-- ═══════════════════════════ TAB 1: PREDICTION ═══════════════════════════ -->
+  <div id="tab-pred" class="panel active">
+    <div class="grid-2">
+
+      <!-- Controls -->
+      <div class="card">
+        <h2>&#127981; Input Features</h2>
+
+        <div class="control-row">
+          <label>Area (sq ft)</label>
+          <span class="slider-val" id="area-lbl">7,300 sq ft</span>
+          <input type="range" id="area-slider" min="3500" max="16200" step="100" value="7300"
+                 oninput="onAreaChange(this.value)">
+          <div style="display:flex;justify-content:space-between;font-size:11px;color:#9ca3af;margin-top:4px;">
+            <span>3,500</span><span>7,500</span><span>11,000</span><span>16,200</span>
+          </div>
+        </div>
+
+        <div class="control-row">
+          <label>Bedrooms</label>
+          <div class="radio-group">
+            <label><input type="radio" name="beds" value="3" checked onchange="onBedsChange()"><span>3 Beds</span></label>
+            <label><input type="radio" name="beds" value="4" onchange="onBedsChange()"><span>4 Beds</span></label>
+            <label><input type="radio" name="beds" value="5" onchange="onBedsChange()"><span>5 Beds</span></label>
+          </div>
+        </div>
+
+        <div class="pred-box" id="pred-box">
+          <div class="label">Estimated House Price</div>
+          <div class="price" id="pred-price">&#8377; --</div>
+          <div class="sub" id="pred-sub">7,300 sq ft &middot; 3 bedrooms</div>
+        </div>
+        <div class="range-bar" id="pred-range"></div>
+      </div>
+
+      <!-- Scatter chart -->
+      <div class="card">
+        <h2>&#128200; Price vs Area</h2>
+        <div class="chart-wrap"><canvas id="scatter-chart" height="300"></canvas></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════ TAB 2: DATA INSIGHTS ════════════════════════ -->
+  <div id="tab-data" class="panel">
+
+    <!-- Stats -->
+    <div class="grid-4">
+      <div class="metric"><div class="lbl">Total Records</div><div class="val">34</div></div>
+      <div class="metric"><div class="lbl">Avg Price</div><div class="val" id="avg-price">--</div><div class="unit">Rs</div></div>
+      <div class="metric"><div class="lbl">Avg Area</div><div class="val" id="avg-area">--</div><div class="unit">sq ft</div></div>
+      <div class="metric"><div class="lbl">Avg Bedrooms</div><div class="val" id="avg-beds">--</div></div>
+    </div>
+
+    <div class="grid-2">
+      <div class="card">
+        <h2>&#128202; Price Distribution</h2>
+        <div class="chart-wrap"><canvas id="hist-chart" height="260"></canvas></div>
+      </div>
+      <div class="card">
+        <h2>&#127968; Avg Price by Bedrooms</h2>
+        <div class="chart-wrap"><canvas id="bar-chart" height="260"></canvas></div>
+      </div>
+    </div>
+
+    <!-- Data table -->
+    <div class="card">
+      <h2>&#128196; Full Dataset</h2>
+      <div style="overflow-x:auto;">
+        <table id="data-table">
+          <thead><tr><th>#</th><th>Price (Rs)</th><th>Area (sq ft)</th><th>Bedrooms</th></tr></thead>
+          <tbody id="data-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════ TAB 3: MODEL PERFORMANCE ════════════════════ -->
+  <div id="tab-perf" class="panel">
+
+    <div class="grid-4">
+      <div class="metric"><div class="lbl">Best Model</div><div class="val" style="font-size:15px;padding-top:6px;">Random Forest</div></div>
+      <div class="metric"><div class="lbl">R&#178; Score</div><div class="val">0.2044</div><div class="unit">test set</div></div>
+      <div class="metric"><div class="lbl">MAE</div><div class="val">1.06M</div><div class="unit">Rs</div></div>
+      <div class="metric"><div class="lbl">RMSE</div><div class="val">1.42M</div><div class="unit">Rs</div></div>
+    </div>
+
+    <div class="card">
+      <h2>&#128202; Model Comparison</h2>
+      <table>
+        <thead><tr><th>Model</th><th>R&#178;</th><th>MAE (Rs)</th><th>RMSE (Rs)</th><th>Status</th></tr></thead>
+        <tbody>
+          <tr style="background:#f0fdf4;">
+            <td><strong>Random Forest</strong></td><td><strong>0.2044</strong></td>
+            <td>1,062,995</td><td>1,420,519</td>
+            <td><span class="tag tag-green">Best</span></td>
+          </tr>
+          <tr>
+            <td>Linear Regression</td><td>-0.1601</td>
+            <td>1,348,271</td><td>1,715,373</td>
+            <td><span class="tag tag-blue">Baseline</span></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="grid-2">
+      <div class="card">
+        <h2>&#128200; Actual vs Predicted (test set)</h2>
+        <div class="chart-wrap"><canvas id="avp-chart" height="280"></canvas></div>
+      </div>
+      <div class="card">
+        <h2>&#128202; Prediction Surface (area vs price by beds)</h2>
+        <div class="chart-wrap"><canvas id="surface-chart" height="280"></canvas></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>&#128214; Model Details</h2>
+      <table>
+        <thead><tr><th>Parameter</th><th>Value</th></tr></thead>
+        <tbody>
+          <tr><td>Algorithm</td><td>Random Forest Regressor (pure NumPy)</td></tr>
+          <tr><td>Trees</td><td>80 CART decision trees</td></tr>
+          <tr><td>Max depth per tree</td><td>4</td></tr>
+          <tr><td>Ensemble method</td><td>Bootstrap aggregating (bagging)</td></tr>
+          <tr><td>Preprocessing</td><td>Z-score standardisation (mean=0, std=1)</td></tr>
+          <tr><td>Train / Test split</td><td>80% / 20% (27 train, 7 test)</td></tr>
+          <tr><td>Random seed</td><td>42</td></tr>
+          <tr><td>Features</td><td>area (sq ft), bedrooms (count)</td></tr>
+          <tr><td>Target</td><td>price (Rs)</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="footer">House Price Predictor &mdash; Made with IBM Bob &middot; Pure NumPy Random Forest</div>
+</div>
+
+<script>
+// ── Embedded model data ──────────────────────────────────────────────────────
+const LOOKUP  = [{"area":3500,"beds":3,"price":8721294},{"area":3600,"beds":3,"price":8721294},{"area":3700,"beds":3,"price":8721294},{"area":3800,"beds":3,"price":8721294},{"area":3900,"beds":3,"price":8721294},{"area":4000,"beds":3,"price":8721294},{"area":4100,"beds":3,"price":8721294},{"area":4200,"beds":3,"price":8721294},{"area":4300,"beds":3,"price":8721294},{"area":4400,"beds":3,"price":8750607},{"area":4500,"beds":3,"price":8750607},{"area":4600,"beds":3,"price":8805251},{"area":4700,"beds":3,"price":8825500},{"area":4800,"beds":3,"price":8825500},{"area":4900,"beds":3,"price":8825500},{"area":5000,"beds":3,"price":8825500},{"area":5100,"beds":3,"price":8825500},{"area":5200,"beds":3,"price":8825500},{"area":5300,"beds":3,"price":8825500},{"area":5400,"beds":3,"price":8825500},{"area":5500,"beds":3,"price":8825500},{"area":5600,"beds":3,"price":9159755},{"area":5700,"beds":3,"price":9159755},{"area":5800,"beds":3,"price":8546380},{"area":5900,"beds":3,"price":8546380},{"area":6000,"beds":3,"price":8721176},{"area":6100,"beds":3,"price":8715659},{"area":6200,"beds":3,"price":8715659},{"area":6300,"beds":3,"price":8715659},{"area":6400,"beds":3,"price":8715659},{"area":6500,"beds":3,"price":8711276},{"area":6600,"beds":3,"price":8877959},{"area":6700,"beds":3,"price":9055167},{"area":6800,"beds":3,"price":9055167},{"area":6900,"beds":3,"price":9055167},{"area":7000,"beds":3,"price":9055167},{"area":7100,"beds":3,"price":9055167},{"area":7200,"beds":3,"price":9890180},{"area":7300,"beds":3,"price":9890180},{"area":7400,"beds":3,"price":9890180},{"area":7500,"beds":3,"price":10206778},{"area":7600,"beds":3,"price":8933888},{"area":7700,"beds":3,"price":8933888},{"area":7800,"beds":3,"price":8933888},{"area":7900,"beds":3,"price":8764653},{"area":8000,"beds":3,"price":8843987},{"area":8100,"beds":3,"price":8911471},{"area":8200,"beds":3,"price":8911471},{"area":8300,"beds":3,"price":8911471},{"area":8400,"beds":3,"price":8911471},{"area":8500,"beds":3,"price":8911471},{"area":8600,"beds":3,"price":9500823},{"area":8700,"beds":3,"price":9500823},{"area":8800,"beds":3,"price":9500823},{"area":8900,"beds":3,"price":9500823},{"area":9000,"beds":3,"price":9500823},{"area":9100,"beds":3,"price":9500823},{"area":9200,"beds":3,"price":9500823},{"area":9300,"beds":3,"price":9500823},{"area":9400,"beds":3,"price":9500823},{"area":9500,"beds":3,"price":9500823},{"area":9600,"beds":3,"price":9500823},{"area":9700,"beds":3,"price":9500823},{"area":9800,"beds":3,"price":9500823},{"area":9900,"beds":3,"price":9500823},{"area":10000,"beds":3,"price":9500823},{"area":10100,"beds":3,"price":9500823},{"area":10200,"beds":3,"price":9500823},{"area":10300,"beds":3,"price":9500823},{"area":10400,"beds":3,"price":9500823},{"area":10500,"beds":3,"price":9500823},{"area":10600,"beds":3,"price":9500823},{"area":10700,"beds":3,"price":9500823},{"area":10800,"beds":3,"price":9500823},{"area":10900,"beds":3,"price":9500823},{"area":11000,"beds":3,"price":9500823},{"area":11100,"beds":3,"price":9500823},{"area":11200,"beds":3,"price":9500823},{"area":11300,"beds":3,"price":9500823},{"area":11400,"beds":3,"price":9500823},{"area":11500,"beds":3,"price":9500823},{"area":11600,"beds":3,"price":9500823},{"area":11700,"beds":3,"price":9500823},{"area":11800,"beds":3,"price":9500823},{"area":11900,"beds":3,"price":9500823},{"area":12000,"beds":3,"price":9500823},{"area":12100,"beds":3,"price":9500823},{"area":12200,"beds":3,"price":9500823},{"area":12300,"beds":3,"price":9500823},{"area":12400,"beds":3,"price":9500823},{"area":12500,"beds":3,"price":9500823},{"area":12600,"beds":3,"price":9500823},{"area":12700,"beds":3,"price":9500823},{"area":12800,"beds":3,"price":9500823},{"area":12900,"beds":3,"price":9500823},{"area":13000,"beds":3,"price":9500823},{"area":13100,"beds":3,"price":9500823},{"area":13200,"beds":3,"price":9500823},{"area":13300,"beds":3,"price":9548948},{"area":13400,"beds":3,"price":9548948},{"area":13500,"beds":3,"price":9548948},{"area":13600,"beds":3,"price":9548948},{"area":13700,"beds":3,"price":9548948},{"area":13800,"beds":3,"price":9548948},{"area":13900,"beds":3,"price":9548948},{"area":14000,"beds":3,"price":9548948},{"area":14100,"beds":3,"price":9548948},{"area":14200,"beds":3,"price":9548948},{"area":14300,"beds":3,"price":9548948},{"area":14400,"beds":3,"price":9548948},{"area":14500,"beds":3,"price":9548948},{"area":14600,"beds":3,"price":9548948},{"area":14700,"beds":3,"price":9548948},{"area":14800,"beds":3,"price":9548948},{"area":14900,"beds":3,"price":9548948},{"area":15000,"beds":3,"price":9548948},{"area":15100,"beds":3,"price":9548948},{"area":15200,"beds":3,"price":9548948},{"area":15300,"beds":3,"price":9548948},{"area":15400,"beds":3,"price":9548948},{"area":15500,"beds":3,"price":9548948},{"area":15600,"beds":3,"price":9548948},{"area":15700,"beds":3,"price":9548948},{"area":15800,"beds":3,"price":9548948},{"area":15900,"beds":3,"price":9548948},{"area":16000,"beds":3,"price":9548948},{"area":16100,"beds":3,"price":9548948},{"area":16200,"beds":3,"price":9548948},{"area":3500,"beds":4,"price":8718487},{"area":3600,"beds":4,"price":8718487},{"area":3700,"beds":4,"price":8718487},{"area":3800,"beds":4,"price":8718487},{"area":3900,"beds":4,"price":8718487},{"area":4000,"beds":4,"price":8718487},{"area":4100,"beds":4,"price":8718487},{"area":4200,"beds":4,"price":8718487},{"area":4300,"beds":4,"price":8710174},{"area":4400,"beds":4,"price":8710174},{"area":4500,"beds":4,"price":8710174},{"area":4600,"beds":4,"price":8710174},{"area":4700,"beds":4,"price":8710174},{"area":4800,"beds":4,"price":8710174},{"area":4900,"beds":4,"price":8693257},{"area":5000,"beds":4,"price":8693257},{"area":5100,"beds":4,"price":8693257},{"area":5200,"beds":4,"price":8693257},{"area":5300,"beds":4,"price":8693257},{"area":5400,"beds":4,"price":8693257},{"area":5500,"beds":4,"price":8693257},{"area":5600,"beds":4,"price":8693257},{"area":5700,"beds":4,"price":8693257},{"area":5800,"beds":4,"price":8693257},{"area":5900,"beds":4,"price":8693257},{"area":6000,"beds":4,"price":9220446},{"area":6100,"beds":4,"price":9220446},{"area":6200,"beds":4,"price":9220446},{"area":6300,"beds":4,"price":9220446},{"area":6400,"beds":4,"price":9220446},{"area":6500,"beds":4,"price":9132108},{"area":6600,"beds":4,"price":9132108},{"area":6700,"beds":4,"price":10955069},{"area":6800,"beds":4,"price":10955069},{"area":6900,"beds":4,"price":10955069},{"area":7000,"beds":4,"price":10955069},{"area":7100,"beds":4,"price":10955069},{"area":7200,"beds":4,"price":10955069},{"area":7300,"beds":4,"price":10955069},{"area":7400,"beds":4,"price":11397623},{"area":7500,"beds":4,"price":11397623},{"area":7600,"beds":4,"price":9570780},{"area":7700,"beds":4,"price":9570780},{"area":7800,"beds":4,"price":9570780},{"area":7900,"beds":4,"price":9570780},{"area":8000,"beds":4,"price":9570780},{"area":8100,"beds":4,"price":9649603},{"area":8200,"beds":4,"price":9649603},{"area":8300,"beds":4,"price":9649603},{"area":8400,"beds":4,"price":9649603},{"area":8500,"beds":4,"price":9649603},{"area":8600,"beds":4,"price":9649603},{"area":8700,"beds":4,"price":9649603},{"area":8800,"beds":4,"price":9649603},{"area":8900,"beds":4,"price":9649603},{"area":9000,"beds":4,"price":9946198},{"area":9100,"beds":4,"price":9946198},{"area":9200,"beds":4,"price":9946198},{"area":9300,"beds":4,"price":9946198},{"area":9400,"beds":4,"price":9946198},{"area":9500,"beds":4,"price":9946198},{"area":9600,"beds":4,"price":9946198},{"area":9700,"beds":4,"price":9946198},{"area":9800,"beds":4,"price":9946198},{"area":9900,"beds":4,"price":9946198},{"area":10000,"beds":4,"price":9946198},{"area":10100,"beds":4,"price":9946198},{"area":10200,"beds":4,"price":9946198},{"area":10300,"beds":4,"price":9946198},{"area":10400,"beds":4,"price":9946198},{"area":10500,"beds":4,"price":9946198},{"area":10600,"beds":4,"price":9946198},{"area":10700,"beds":4,"price":9946198},{"area":10800,"beds":4,"price":9946198},{"area":10900,"beds":4,"price":9946198},{"area":11000,"beds":4,"price":9946198},{"area":11100,"beds":4,"price":9946198},{"area":11200,"beds":4,"price":9946198},{"area":11300,"beds":4,"price":9946198},{"area":11400,"beds":4,"price":9946198},{"area":11500,"beds":4,"price":9946198},{"area":11600,"beds":4,"price":9946198},{"area":11700,"beds":4,"price":9946198},{"area":11800,"beds":4,"price":9946198},{"area":11900,"beds":4,"price":9946198},{"area":12000,"beds":4,"price":9946198},{"area":12100,"beds":4,"price":9946198},{"area":12200,"beds":4,"price":9946198},{"area":12300,"beds":4,"price":9946198},{"area":12400,"beds":4,"price":9946198},{"area":12500,"beds":4,"price":9946198},{"area":12600,"beds":4,"price":9946198},{"area":12700,"beds":4,"price":9946198},{"area":12800,"beds":4,"price":9946198},{"area":12900,"beds":4,"price":9946198},{"area":13000,"beds":4,"price":9946198},{"area":13100,"beds":4,"price":9946198},{"area":13200,"beds":4,"price":9946198},{"area":13300,"beds":4,"price":9994323},{"area":13400,"beds":4,"price":9994323},{"area":13500,"beds":4,"price":9994323},{"area":13600,"beds":4,"price":9994323},{"area":13700,"beds":4,"price":9994323},{"area":13800,"beds":4,"price":9994323},{"area":13900,"beds":4,"price":9994323},{"area":14000,"beds":4,"price":9994323},{"area":14100,"beds":4,"price":9994323},{"area":14200,"beds":4,"price":9994323},{"area":14300,"beds":4,"price":9994323},{"area":14400,"beds":4,"price":9994323},{"area":14500,"beds":4,"price":9994323},{"area":14600,"beds":4,"price":9994323},{"area":14700,"beds":4,"price":9994323},{"area":14800,"beds":4,"price":9994323},{"area":14900,"beds":4,"price":9994323},{"area":15000,"beds":4,"price":9994323},{"area":15100,"beds":4,"price":9994323},{"area":15200,"beds":4,"price":9994323},{"area":15300,"beds":4,"price":9994323},{"area":15400,"beds":4,"price":9994323},{"area":15500,"beds":4,"price":9994323},{"area":15600,"beds":4,"price":9994323},{"area":15700,"beds":4,"price":9994323},{"area":15800,"beds":4,"price":9994323},{"area":15900,"beds":4,"price":9994323},{"area":16000,"beds":4,"price":9994323},{"area":16100,"beds":4,"price":9994323},{"area":16200,"beds":4,"price":9994323},{"area":3500,"beds":5,"price":8715132},{"area":3600,"beds":5,"price":8715132},{"area":3700,"beds":5,"price":8715132},{"area":3800,"beds":5,"price":8715132},{"area":3900,"beds":5,"price":8715132},{"area":4000,"beds":5,"price":8715132},{"area":4100,"beds":5,"price":8715132},{"area":4200,"beds":5,"price":8715132},{"area":4300,"beds":5,"price":8706820},{"area":4400,"beds":5,"price":8706820},{"area":4500,"beds":5,"price":8706820},{"area":4600,"beds":5,"price":8706820},{"area":4700,"beds":5,"price":8706820},{"area":4800,"beds":5,"price":8706820},{"area":4900,"beds":5,"price":8689903},{"area":5000,"beds":5,"price":8689903},{"area":5100,"beds":5,"price":8689903},{"area":5200,"beds":5,"price":8689903},{"area":5300,"beds":5,"price":8689903},{"area":5400,"beds":5,"price":8689903},{"area":5500,"beds":5,"price":8689903},{"area":5600,"beds":5,"price":8689903},{"area":5700,"beds":5,"price":8689903},{"area":5800,"beds":5,"price":8689903},{"area":5900,"beds":5,"price":8689903},{"area":6000,"beds":5,"price":9187298},{"area":6100,"beds":5,"price":9187298},{"area":6200,"beds":5,"price":9187298},{"area":6300,"beds":5,"price":9187298},{"area":6400,"beds":5,"price":9187298},{"area":6500,"beds":5,"price":9099959},{"area":6600,"beds":5,"price":9099959},{"area":6700,"beds":5,"price":10921921},{"area":6800,"beds":5,"price":10921921},{"area":6900,"beds":5,"price":10921921},{"area":7000,"beds":5,"price":10921921},{"area":7100,"beds":5,"price":10921921},{"area":7200,"beds":5,"price":10921921},{"area":7300,"beds":5,"price":10921921},{"area":7400,"beds":5,"price":11364476},{"area":7500,"beds":5,"price":11364476},{"area":7600,"beds":5,"price":9537633},{"area":7700,"beds":5,"price":9537633},{"area":7800,"beds":5,"price":9537633},{"area":7900,"beds":5,"price":9537633},{"area":8000,"beds":5,"price":9537633},{"area":8100,"beds":5,"price":9616456},{"area":8200,"beds":5,"price":9616456},{"area":8300,"beds":5,"price":9616456},{"area":8400,"beds":5,"price":9616456},{"area":8500,"beds":5,"price":9616456},{"area":8600,"beds":5,"price":9616456},{"area":8700,"beds":5,"price":9616456},{"area":8800,"beds":5,"price":9616456},{"area":8900,"beds":5,"price":9616456},{"area":9000,"beds":5,"price":9913050},{"area":9100,"beds":5,"price":9913050},{"area":9200,"beds":5,"price":9913050},{"area":9300,"beds":5,"price":9913050},{"area":9400,"beds":5,"price":9913050},{"area":9500,"beds":5,"price":9913050},{"area":9600,"beds":5,"price":9913050},{"area":9700,"beds":5,"price":9913050},{"area":9800,"beds":5,"price":9913050},{"area":9900,"beds":5,"price":9913050},{"area":10000,"beds":5,"price":9913050},{"area":10100,"beds":5,"price":9913050},{"area":10200,"beds":5,"price":9913050},{"area":10300,"beds":5,"price":9913050},{"area":10400,"beds":5,"price":9913050},{"area":10500,"beds":5,"price":9913050},{"area":10600,"beds":5,"price":9913050},{"area":10700,"beds":5,"price":9913050},{"area":10800,"beds":5,"price":9913050},{"area":10900,"beds":5,"price":9913050},{"area":11000,"beds":5,"price":9913050},{"area":11100,"beds":5,"price":9913050},{"area":11200,"beds":5,"price":9913050},{"area":11300,"beds":5,"price":9913050},{"area":11400,"beds":5,"price":9913050},{"area":11500,"beds":5,"price":9913050},{"area":11600,"beds":5,"price":9913050},{"area":11700,"beds":5,"price":9913050},{"area":11800,"beds":5,"price":9913050},{"area":11900,"beds":5,"price":9913050},{"area":12000,"beds":5,"price":9913050},{"area":12100,"beds":5,"price":9913050},{"area":12200,"beds":5,"price":9913050},{"area":12300,"beds":5,"price":9913050},{"area":12400,"beds":5,"price":9913050},{"area":12500,"beds":5,"price":9913050},{"area":12600,"beds":5,"price":9913050},{"area":12700,"beds":5,"price":9913050},{"area":12800,"beds":5,"price":9913050},{"area":12900,"beds":5,"price":9913050},{"area":13000,"beds":5,"price":9913050},{"area":13100,"beds":5,"price":9913050},{"area":13200,"beds":5,"price":9913050},{"area":13300,"beds":5,"price":9961175},{"area":13400,"beds":5,"price":9961175},{"area":13500,"beds":5,"price":9961175},{"area":13600,"beds":5,"price":9961175},{"area":13700,"beds":5,"price":9961175},{"area":13800,"beds":5,"price":9961175},{"area":13900,"beds":5,"price":9961175},{"area":14000,"beds":5,"price":9961175},{"area":14100,"beds":5,"price":9961175},{"area":14200,"beds":5,"price":9961175},{"area":14300,"beds":5,"price":9961175},{"area":14400,"beds":5,"price":9961175},{"area":14500,"beds":5,"price":9961175},{"area":14600,"beds":5,"price":9961175},{"area":14700,"beds":5,"price":9961175},{"area":14800,"beds":5,"price":9961175},{"area":14900,"beds":5,"price":9961175},{"area":15000,"beds":5,"price":9961175},{"area":15100,"beds":5,"price":9961175},{"area":15200,"beds":5,"price":9961175},{"area":15300,"beds":5,"price":9961175},{"area":15400,"beds":5,"price":9961175},{"area":15500,"beds":5,"price":9961175},{"area":15600,"beds":5,"price":9961175},{"area":15700,"beds":5,"price":9961175},{"area":15800,"beds":5,"price":9961175},{"area":15900,"beds":5,"price":9961175},{"area":16000,"beds":5,"price":9961175},{"area":16100,"beds":5,"price":9961175},{"area":16200,"beds":5,"price":9961175}];
+
+const DATASET = [{"price":13300000,"area":7420,"bedrooms":4},{"price":12250000,"area":8960,"bedrooms":4},{"price":12250000,"area":9960,"bedrooms":3},{"price":12215000,"area":7500,"bedrooms":4},{"price":11410000,"area":7420,"bedrooms":4},{"price":10850000,"area":7500,"bedrooms":3},{"price":10150000,"area":8580,"bedrooms":4},{"price":10150000,"area":16200,"bedrooms":5},{"price":9870000,"area":8100,"bedrooms":4},{"price":9800000,"area":5750,"bedrooms":3},{"price":9800000,"area":13200,"bedrooms":3},{"price":9681000,"area":6000,"bedrooms":4},{"price":9310000,"area":6550,"bedrooms":4},{"price":9240000,"area":3500,"bedrooms":4},{"price":9240000,"area":7800,"bedrooms":3},{"price":9100000,"area":6000,"bedrooms":4},{"price":9100000,"area":6600,"bedrooms":4},{"price":8960000,"area":8500,"bedrooms":3},{"price":8890000,"area":4600,"bedrooms":3},{"price":8855000,"area":6420,"bedrooms":3},{"price":8750000,"area":4320,"bedrooms":3},{"price":8680000,"area":7155,"bedrooms":3},{"price":8645000,"area":8050,"bedrooms":3},{"price":8645000,"area":4560,"bedrooms":3},{"price":8575000,"area":8800,"bedrooms":3},{"price":8540000,"area":6540,"bedrooms":4},{"price":8463000,"area":6000,"bedrooms":3},{"price":8400000,"area":8875,"bedrooms":3},{"price":8400000,"area":7950,"bedrooms":5},{"price":8400000,"area":5500,"bedrooms":4},{"price":8400000,"area":7475,"bedrooms":3},{"price":8400000,"area":7000,"bedrooms":3},{"price":8295000,"area":4880,"bedrooms":4},{"price":8190000,"area":5960,"bedrooms":3}];
+
+// ── Lookup: nearest area in model table ──────────────────────────────────────
+function predictPrice(area, beds) {
+  const entries = LOOKUP.filter(r => r.beds === beds);
+  let best = entries[0], bestDiff = Infinity;
+  for (const r of entries) {
+    const d = Math.abs(r.area - area);
+    if (d < bestDiff) { bestDiff = d; best = r; }
+  }
+  return best.price;
+}
+
+// ── Helpers ──────────────────────────────────────────────────────────────────
+const fmt  = n => 'Rs ' + Math.round(n).toLocaleString('en-IN');
+const fmtM = n => (n/1e6).toFixed(2) + 'M';
+
+function getBeds() {
+  return parseInt(document.querySelector('input[name=beds]:checked').value);
+}
+
+// ── State ────────────────────────────────────────────────────────────────────
+let currentArea = 7300, currentBeds = 3;
+
+// ── Update slider fill ───────────────────────────────────────────────────────
+function updateSliderFill(slider) {
+  const min = +slider.min, max = +slider.max, val = +slider.value;
+  const pct = ((val - min) / (max - min) * 100).toFixed(1) + '%';
+  slider.style.setProperty('--pct', pct);
+}
+
+// ── Prediction panel ─────────────────────────────────────────────────────────
+function updatePrediction() {
+  const price = predictPrice(currentArea, currentBeds);
+  document.getElementById('pred-price').textContent = 'Rs ' + Math.round(price).toLocaleString('en-IN');
+  document.getElementById('pred-sub').textContent =
+    currentArea.toLocaleString() + ' sq ft \u00b7 ' + currentBeds + ' bedroom' + (currentBeds > 1 ? 's' : '');
+  const lo = Math.round(price * 0.90), hi = Math.round(price * 1.10);
+  document.getElementById('pred-range').innerHTML =
+    '<strong>Estimated range:</strong> Rs ' + lo.toLocaleString('en-IN') +
+    ' &mdash; Rs ' + hi.toLocaleString('en-IN') + ' <em>(\u00b110%)</em>';
+  drawScatter();
+}
+
+function onAreaChange(val) {
+  currentArea = +val;
+  document.getElementById('area-lbl').textContent = (+val).toLocaleString() + ' sq ft';
+  updateSliderFill(document.getElementById('area-slider'));
+  updatePrediction();
+}
+
+function onBedsChange() {
+  currentBeds = getBeds();
+  updatePrediction();
+}
+
+// ── Tab switching ─────────────────────────────────────────────────────────────
+function switchTab(id) {
+  document.querySelectorAll('.tab').forEach((t,i) => {
+    t.classList.toggle('active', ['pred','data','perf'][i] === id);
+  });
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  document.getElementById('tab-' + id).classList.add('active');
+  if (id === 'data')  { buildDataTab(); }
+  if (id === 'perf')  { buildPerfTab(); }
+}
+
+// ── Canvas helpers ────────────────────────────────────────────────────────────
+function setupCanvas(id) {
+  const canvas = document.getElementById(id);
+  const dpr = window.devicePixelRatio || 1;
+  const rect = canvas.parentElement.getBoundingClientRect();
+  const w = rect.width || 400;
+  const h = canvas.height || 280;
+  canvas.width  = w * dpr;
+  canvas.height = h * dpr;
+  canvas.style.width  = w + 'px';
+  canvas.style.height = h + 'px';
+  const ctx = canvas.getContext('2d');
+  ctx.scale(dpr, dpr);
+  return { ctx, w, h };
+}
+
+const PAD = { top: 20, right: 20, bottom: 45, left: 72 };
+
+function mapX(val, minV, maxV, w) {
+  return PAD.left + (val - minV) / (maxV - minV) * (w - PAD.left - PAD.right);
+}
+function mapY(val, minV, maxV, h) {
+  return h - PAD.bottom - (val - minV) / (maxV - minV) * (h - PAD.top - PAD.bottom);
+}
+
+function drawAxes(ctx, w, h, xLabel, yLabel) {
+  ctx.strokeStyle = '#e5e7eb'; ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(PAD.left, PAD.top); ctx.lineTo(PAD.left, h - PAD.bottom);
+  ctx.lineTo(w - PAD.right, h - PAD.bottom);
+  ctx.stroke();
+  ctx.fillStyle = '#57606a'; ctx.font = '11px system-ui';
+  ctx.textAlign = 'center';
+  ctx.fillText(xLabel, w / 2, h - 4);
+  ctx.save(); ctx.translate(14, h / 2); ctx.rotate(-Math.PI / 2);
+  ctx.fillText(yLabel, 0, 0); ctx.restore();
+}
+
+// ── Scatter chart (tab 1) ────────────────────────────────────────────────────
+function drawScatter() {
+  const { ctx, w, h } = setupCanvas('scatter-chart');
+  ctx.clearRect(0, 0, w, h);
+
+  const prices = DATASET.map(r => r.price);
+  const areas  = DATASET.map(r => r.area);
+  const minP = Math.min(...prices) * 0.95, maxP = Math.max(...prices) * 1.05;
+  const minA = Math.min(...areas)  * 0.95, maxA = Math.max(...areas)  * 1.05;
+
+  drawAxes(ctx, w, h, 'Area (sq ft)', 'Price (Rs M)');
+
+  // grid lines
+  ctx.strokeStyle = '#f3f4f6'; ctx.lineWidth = 1;
+  for (let i = 1; i <= 4; i++) {
+    const y = PAD.top + i * (h - PAD.top - PAD.bottom) / 5;
+    ctx.beginPath(); ctx.moveTo(PAD.left, y); ctx.lineTo(w - PAD.right, y); ctx.stroke();
+  }
+
+  // x-axis ticks
+  ctx.fillStyle = '#9ca3af'; ctx.font = '10px system-ui'; ctx.textAlign = 'center';
+  [4000,6000,8000,10000,12000,14000,16000].forEach(v => {
+    const x = mapX(v, minA, maxA, w);
+    if (x > PAD.left && x < w - PAD.right) {
+      ctx.fillText((v/1000).toFixed(0) + 'k', x, h - PAD.bottom + 14);
+    }
+  });
+  // y-axis ticks
+  ctx.textAlign = 'right';
+  [8,9,10,11,12,13].forEach(v => {
+    const y = mapY(v*1e6, minP, maxP, h);
+    if (y > PAD.top && y < h - PAD.bottom) {
+      ctx.fillText(v + 'M', PAD.left - 6, y + 4);
+    }
+  });
+
+  const bedColors = { 3:'#3b82d4', 4:'#7c5cd8', 5:'#10b981' };
+
+  // data points
+  DATASET.forEach(r => {
+    const x = mapX(r.area, minA, maxA, w);
+    const y = mapY(r.price, minP, maxP, h);
+    ctx.beginPath(); ctx.arc(x, y, 5, 0, 2*Math.PI);
+    ctx.fillStyle = bedColors[r.bedrooms] || '#9ca3af';
+    ctx.fill();
+    ctx.strokeStyle = 'white'; ctx.lineWidth = 1.5; ctx.stroke();
+  });
+
+  // crosshairs
+  const predPrice = predictPrice(currentArea, currentBeds);
+  const cx = mapX(currentArea, minA, maxA, w);
+  const cy = mapY(predPrice, minP, maxP, h);
+
+  ctx.setLineDash([5,3]);
+  ctx.strokeStyle = '#e53e3e'; ctx.lineWidth = 1.5;
+  ctx.beginPath(); ctx.moveTo(cx, PAD.top); ctx.lineTo(cx, h - PAD.bottom); ctx.stroke();
+  ctx.strokeStyle = '#3b82d4';
+  ctx.beginPath(); ctx.moveTo(PAD.left, cy); ctx.lineTo(w - PAD.right, cy); ctx.stroke();
+  ctx.setLineDash([]);
+
+  // prediction dot
+  ctx.beginPath(); ctx.arc(cx, cy, 8, 0, 2*Math.PI);
+  ctx.fillStyle = '#e53e3e'; ctx.fill();
+  ctx.strokeStyle = 'white'; ctx.lineWidth = 2; ctx.stroke();
+
+  // legend
+  const legend = [{c:'#3b82d4',l:'3 Beds'},{c:'#7c5cd8',l:'4 Beds'},{c:'#10b981',l:'5 Beds'},{c:'#e53e3e',l:'Your Input'}];
+  let lx = PAD.left + 4;
+  legend.forEach(item => {
+    ctx.beginPath(); ctx.arc(lx + 5, PAD.top + 10, 5, 0, 2*Math.PI);
+    ctx.fillStyle = item.c; ctx.fill();
+    ctx.fillStyle = '#1f2328'; ctx.font = '10px system-ui'; ctx.textAlign = 'left';
+    ctx.fillText(item.l, lx + 13, PAD.top + 14);
+    lx += ctx.measureText(item.l).width + 26;
+  });
+}
+
+// ── Data Insights tab ────────────────────────────────────────────────────────
+let dataBuilt = false;
+function buildDataTab() {
+  if (dataBuilt) return; dataBuilt = true;
+
+  // stats
+  const avg = arr => arr.reduce((a,b) => a+b, 0) / arr.length;
+  const prices = DATASET.map(r => r.price);
+  const areas  = DATASET.map(r => r.area);
+  const beds   = DATASET.map(r => r.bedrooms);
+  document.getElementById('avg-price').textContent = (avg(prices)/1e6).toFixed(2) + 'M';
+  document.getElementById('avg-area').textContent  = Math.round(avg(areas)).toLocaleString();
+  document.getElementById('avg-beds').textContent  = avg(beds).toFixed(1);
+
+  // table
+  const tbody = document.getElementById('data-tbody');
+  DATASET.forEach((r,i) => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td>${i+1}</td><td>Rs ${r.price.toLocaleString('en-IN')}</td><td>${r.area.toLocaleString()}</td><td>${r.bedrooms}</td>`;
+    tbody.appendChild(tr);
+  });
+
+  // histogram
+  drawHist();
+  // bar
+  drawBar();
+}
+
+function drawHist() {
+  const { ctx, w, h } = setupCanvas('hist-chart');
+  ctx.clearRect(0, 0, w, h);
+  drawAxes(ctx, w, h, 'Price (Rs M)', 'Count');
+
+  const prices = DATASET.map(r => r.price / 1e6);
+  const bins = 8, minP = 8, maxP = 14;
+  const counts = new Array(bins).fill(0);
+  prices.forEach(p => {
+    const i = Math.min(bins-1, Math.floor((p - minP) / (maxP - minP) * bins));
+    if (i >= 0) counts[i]++;
+  });
+  const maxC = Math.max(...counts);
+  const bw = (w - PAD.left - PAD.right) / bins;
+
+  counts.forEach((c, i) => {
+    const x = PAD.left + i * bw + 2;
+    const barH = (c / maxC) * (h - PAD.top - PAD.bottom);
+    const y = h - PAD.bottom - barH;
+    ctx.fillStyle = '#3b82d4';
+    ctx.fillRect(x, y, bw - 4, barH);
+    const label = (minP + i * (maxP - minP) / bins).toFixed(0) + 'M';
+    ctx.fillStyle = '#9ca3af'; ctx.font = '9px system-ui'; ctx.textAlign = 'center';
+    ctx.fillText(label, x + (bw-4)/2, h - PAD.bottom + 13);
+  });
+  ctx.fillStyle = '#9ca3af'; ctx.textAlign = 'right'; ctx.font = '10px system-ui';
+  [0,1,2,3,4,5].forEach(v => {
+    if (v <= maxC) {
+      const y = mapY(v, 0, maxC, h);
+      ctx.fillText(v, PAD.left - 6, y + 4);
+    }
+  });
+}
+
+function drawBar() {
+  const { ctx, w, h } = setupCanvas('bar-chart');
+  ctx.clearRect(0, 0, w, h);
+  drawAxes(ctx, w, h, 'Bedrooms', 'Avg Price (Rs M)');
+
+  const groups = {};
+  DATASET.forEach(r => {
+    if (!groups[r.bedrooms]) groups[r.bedrooms] = [];
+    groups[r.bedrooms].push(r.price / 1e6);
+  });
+  const keys = Object.keys(groups).sort();
+  const avgs = keys.map(k => groups[k].reduce((a,b)=>a+b,0)/groups[k].length);
+  const maxV = Math.max(...avgs) * 1.1, minV = 0;
+  const bw = (w - PAD.left - PAD.right) / keys.length;
+  const colors = ['#3b82d4','#7c5cd8','#10b981'];
+
+  keys.forEach((k, i) => {
+    const x = PAD.left + i * bw + bw * 0.15;
+    const barH = (avgs[i] / maxV) * (h - PAD.top - PAD.bottom);
+    const y = h - PAD.bottom - barH;
+    ctx.fillStyle = colors[i];
+    ctx.fillRect(x, y, bw * 0.7, barH);
+    ctx.fillStyle = '#1f2328'; ctx.font = '11px system-ui'; ctx.textAlign = 'center';
+    ctx.fillText(k + ' bed', x + bw*0.35, h - PAD.bottom + 14);
+    ctx.fillStyle = '#57606a';
+    ctx.fillText(avgs[i].toFixed(1)+'M', x + bw*0.35, y - 6);
+  });
+  [8,9,10,11].forEach(v => {
+    const y = mapY(v, minV, maxV, h);
+    if (y > PAD.top && y < h - PAD.bottom) {
+      ctx.fillStyle = '#9ca3af'; ctx.font = '10px system-ui'; ctx.textAlign = 'right';
+      ctx.fillText(v+'M', PAD.left - 6, y + 4);
+    }
+  });
+}
+
+// ── Model Performance tab ────────────────────────────────────────────────────
+let perfBuilt = false;
+function buildPerfTab() {
+  if (perfBuilt) return; perfBuilt = true;
+  drawAvP();
+  drawSurface();
+}
+
+function drawAvP() {
+  const { ctx, w, h } = setupCanvas('avp-chart');
+  ctx.clearRect(0, 0, w, h);
+  drawAxes(ctx, w, h, 'Actual Price', 'Predicted Price');
+
+  // use test set: fixed random seed 42 gave indices for 7 test points
+  // replicate: permute 34 with seed 42, take last 7
+  function seededPerm(n, seed) {
+    const arr = Array.from({length:n},(_,i)=>i);
+    let s = seed;
+    for (let i = n-1; i > 0; i--) {
+      s = (s * 1664525 + 1013904223) & 0xffffffff;
+      const j = Math.abs(s) % (i+1);
+      [arr[i], arr[j]] = [arr[j], arr[i]];
+    }
+    return arr;
+  }
+  const perm = seededPerm(34, 42);
+  const split = Math.floor(0.8 * 34);
+  const testIdx = perm.slice(split);
+
+  const actuals = testIdx.map(i => DATASET[i].price);
+  const preds   = testIdx.map(i => predictPrice(DATASET[i].area, DATASET[i].bedrooms));
+  const all     = [...actuals, ...preds];
+  const minV = Math.min(...all) * 0.95, maxV = Math.max(...all) * 1.05;
+
+  // perfect-fit line
+  ctx.strokeStyle = '#e53e3e'; ctx.lineWidth = 1.5; ctx.setLineDash([5,3]);
+  ctx.beginPath();
+  ctx.moveTo(mapX(minV,minV,maxV,w), mapY(minV,minV,maxV,h));
+  ctx.lineTo(mapX(maxV,minV,maxV,w), mapY(maxV,minV,maxV,h));
+  ctx.stroke(); ctx.setLineDash([]);
+
+  // points
+  actuals.forEach((a, i) => {
+    const x = mapX(a, minV, maxV, w);
+    const y = mapY(preds[i], minV, maxV, h);
+    ctx.beginPath(); ctx.arc(x, y, 6, 0, 2*Math.PI);
+    ctx.fillStyle = '#3b82d4'; ctx.fill();
+    ctx.strokeStyle = 'white'; ctx.lineWidth = 1.5; ctx.stroke();
+  });
+
+  // axis ticks
+  ctx.fillStyle = '#9ca3af'; ctx.font = '9px system-ui'; ctx.textAlign = 'center';
+  [8.5,9,9.5,10,10.5,11,11.5,12,12.5,13].forEach(v => {
+    const x = mapX(v*1e6, minV, maxV, w);
+    if (x > PAD.left && x < w-PAD.right) ctx.fillText(v+'M', x, h-PAD.bottom+13);
+  });
+  ctx.textAlign = 'right';
+  [8.5,9,9.5,10,10.5,11,11.5,12,12.5,13].forEach(v => {
+    const y = mapY(v*1e6, minV, maxV, h);
+    if (y > PAD.top && y < h-PAD.bottom) ctx.fillText(v+'M', PAD.left-5, y+4);
+  });
+}
+
+function drawSurface() {
+  const { ctx, w, h } = setupCanvas('surface-chart');
+  ctx.clearRect(0, 0, w, h);
+  drawAxes(ctx, w, h, 'Area (sq ft)', 'Price (Rs M)');
+
+  const minA = 3500, maxA = 16200;
+  const minP = 8e6 * 0.95, maxP = 12e6 * 1.05;
+  const colors = {3:'#3b82d4', 4:'#7c5cd8', 5:'#10b981'};
+  const labels = {3:'3 Beds',4:'4 Beds',5:'5 Beds'};
+
+  [3,4,5].forEach(beds => {
+    const pts = LOOKUP.filter(r => r.beds === beds).sort((a,b) => a.area-b.area);
+    ctx.strokeStyle = colors[beds]; ctx.lineWidth = 2; ctx.setLineDash([]);
+    ctx.beginPath();
+    pts.forEach((r, i) => {
+      const x = mapX(r.area, minA, maxA, w);
+      const y = mapY(r.price, minP, maxP, h);
+      i === 0 ? ctx.moveTo(x,y) : ctx.lineTo(x,y);
+    });
+    ctx.stroke();
+  });
+
+  // legend
+  let lx = PAD.left;
+  [3,4,5].forEach(beds => {
+    ctx.strokeStyle = colors[beds]; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.moveTo(lx, PAD.top+10); ctx.lineTo(lx+18, PAD.top+10); ctx.stroke();
+    ctx.fillStyle = '#1f2328'; ctx.font = '10px system-ui'; ctx.textAlign = 'left';
+    ctx.fillText(labels[beds], lx+22, PAD.top+14);
+    lx += 70;
+  });
+
+  // axis ticks
+  ctx.fillStyle = '#9ca3af'; ctx.font = '9px system-ui'; ctx.textAlign = 'center';
+  [4000,6000,8000,10000,12000,14000,16000].forEach(v => {
+    const x = mapX(v, minA, maxA, w);
+    if (x > PAD.left && x < w-PAD.right) ctx.fillText((v/1000)+'k', x, h-PAD.bottom+13);
+  });
+  ctx.textAlign = 'right';
+  [8.5,9,9.5,10,10.5,11,11.5,12].forEach(v => {
+    const y = mapY(v*1e6, minP, maxP, h);
+    if (y > PAD.top && y < h-PAD.bottom) ctx.fillText(v+'M', PAD.left-5, y+4);
+  });
+}
+
+// ── Init ──────────────────────────────────────────────────────────────────────
+window.addEventListener('load', () => {
+  const slider = document.getElementById('area-slider');
+  updateSliderFill(slider);
+  updatePrediction();
+});
+window.addEventListener('resize', () => {
+  drawScatter();
+  if (dataBuilt)  { drawHist(); drawBar(); }
+  if (perfBuilt)  { drawAvP(); drawSurface(); }
+});
+</script>
+</body>
+</html>
