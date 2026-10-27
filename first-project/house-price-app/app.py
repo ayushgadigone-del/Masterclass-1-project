@@ -108,7 +108,7 @@ with st.sidebar:
 
     bedrooms = st.selectbox(
         "🛏️ Bedrooms",
-        options=sorted(df["bedrooms"].unique().tolist()),
+        options=sorted([b for b in df["bedrooms"].unique().tolist() if b != 5]),
         index=1,
         help="Number of bedrooms",
     )
