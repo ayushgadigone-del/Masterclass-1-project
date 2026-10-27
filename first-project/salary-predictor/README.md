@@ -1,6 +1,6 @@
 # Salary Predictor
 
-**GitHub:** [Open Salary Predictor on GitHub](https://github.com/ayushgadigone-del/Masterclass-1-project/tree/main/First%20project/Salary%20Predictor)
+**GitHub:** [Open Salary Predictor on GitHub](https://github.com/ayushgadigone-del/Masterclass-1-project/tree/main/first-project/salary-predictor)
 
 A pure-Python command-line tool that predicts salary from years of experience using a hand-rolled linear regression model — no external ML libraries required.
 
@@ -34,7 +34,7 @@ A pure-Python command-line tool that predicts salary from years of experience us
 **Requirements:** Python 3.8+ (no extra packages needed — uses only `csv` and `math` from the standard library)
 
 ```bash
-cd "First project/Salary Predictor"
+cd first-project/salary-predictor
 python salary_predictor.py
 ```
 

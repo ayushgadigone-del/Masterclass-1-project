@@ -1,6 +1,6 @@
 # 🏠 House Price Prediction App
 
-**GitHub:** [Open on GitHub](https://github.com/ayushgadigone-del/Masterclass-1-project/tree/main/First%20project/house_price_app)
+**GitHub:** [Open on GitHub](https://github.com/ayushgadigone-del/Masterclass-1-project/tree/main/first-project/house-price-app)
 
 A Streamlit web app that predicts house prices based on area and number of bedrooms. The ML models are built from scratch using only NumPy — no scikit-learn used for training.
 
@@ -19,7 +19,7 @@ A Streamlit web app that predicts house prices based on area and number of bedro
 ## Project Structure
 
 ```
-house_price_app/
+house-price-app/
 ├── app.py                              # Streamlit frontend
 ├── train_model.py                      # Model training script
 ├── models_numpy.py                     # LinearRegression & RandomForest from scratch (NumPy)
@@ -58,7 +58,7 @@ house_price_app/
 ### 1. Install dependencies
 
 ```bash
-cd "First project/house_price_app"
+cd first-project/house-price-app
 pip install -r requirements.txt
 ```
 
