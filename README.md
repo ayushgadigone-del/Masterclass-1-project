@@ -15,6 +15,8 @@ Two machine learning projects built with Python and Scikit-learn.
 
 **GitHub:** [Open House Price App on GitHub](https://github.com/ayushgadigone-del/Masterclass-1-project/tree/main/First%20project/house_price_app)
 
+**Landing Page:** https://masterclass-1-project-house-price-predictor.streamlit.app/
+
 A Flask web application that predicts house prices based on features like area, bedrooms, bathrooms, and location.
 
 ### Files
@@ -72,6 +74,8 @@ python train_model.py
 ## 💼 Salary Predictor
 
 **GitHub:** [Open Salary Predictor on GitHub](https://github.com/ayushgadigone-del/Masterclass-1-project/tree/main/First%20project/Salary%20Predictor)
+
+**Landing Page:** https://masterclass-1-project-salary-predictor.streamlit.app/
 
 A pure-Python command-line tool that predicts salary from years of experience using a hand-rolled linear regression model — no external ML libraries required.
 
